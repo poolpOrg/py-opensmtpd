@@ -8,7 +8,7 @@ class SMTP_IN(object):
         self._filter_callback = {}
         self._on_message = None
         self.event_log = open(event_log, "r") if event_log else sys.stdin
-        self._logger = open(logfile, "w+")
+        self._logger = open(logfile, "w+") if logfile else None
 
     def on_report(self, event, func):
         self._report_callback[event] = func
@@ -47,8 +47,9 @@ class SMTP_IN(object):
             if not line:
                 break
             line = line.strip()
-            self._logger.write(line + "\n")
-            self._logger.flush()
+            if self._logger:
+                self._logger.write(line + "\n")
+                self._logger.flush()
 
             kind = line.split('|')[0]
             if kind == 'report':
