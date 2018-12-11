@@ -52,40 +52,39 @@ class smtp_in(object):
     def on_filter(self, event, func):
         self._filter_callback[event] = func
     
-    def _report(self, line):
-        fields = line.split('|')
-        _, _, timestamp, subsystem, event, session_id = fields[0:6]
-
+    def _report(self, timestamp, event, session_id, params):
         if event in self._report_callback:
-            self._report_callback[event](timestamp, session_id, fields[6:])
+            self._report_callback[event](timestamp, session_id, params)
 
-    def _filter(self, line):
-        fields = line.split('|')
-        _, _, timestamp, subsystem, event, session_id = fields[0:6]
-        
+    def _filter(self, timestamp, event, session_id, params):
         if event in self._filter_callback:
-            self._filter_callback[event](timestamp, session_id, fields[6:])
+            self._filter_callback[event](timestamp, session_id, params)
             return
 
         if event == 'data-line':
-            out_line = '|'.join(fields[6:])
-            sys.stdout.write("filter-dataline|%s|%s\n" % (session_id, out_line))
-            sys.stdout.flush()
+            dataline(session_id, '|'.join(params[6:]))
             return
 
-        sys.stdout.write("filter-result|%s|proceed\n" % (session_id, ))
-        sys.stdout.flush()
+        proceed(session_id)
+
         
     def run(self):
         while True:
             line = self.stream.readline()
             if not line:
                 break
-            line = line.strip()
-            kind = line.split('|')[0]
-            if kind == 'report':
-                self._report(line)
-            elif kind == 'filter':
-                self._filter(line)
 
+            fields = line.strip().split('|')
+            kind, version, timestamp, subsystem, event, session_id = fields[0:6]
+            params = fields[6:]
 
+            if subsystem != "smtp-in":
+                continue
+
+            if kind == 'report' and version == '1':
+                self._report(timestamp, event, session_id, params)
+            elif kind == 'filter' and version == '1':
+                self._filter(timestamp, event, session_id, params)
+
+            # either we received an unsupported message kind
+            # or an unsupported message version, skip.
