@@ -44,6 +44,7 @@ class smtp_in(object):
     def __init__(self, stream = sys.stdin):
         self._report_callback = {}
         self._filter_callback = {}
+        self._event_callback = None
         self.stream = stream
 
     def on_report(self, event, func):
@@ -51,7 +52,10 @@ class smtp_in(object):
 
     def on_filter(self, event, func):
         self._filter_callback[event] = func
-    
+
+    def on_event(self, func):
+        self._event_callback = func
+
     def _report(self, timestamp, event, session_id, params):
         if event in self._report_callback:
             self._report_callback[event](timestamp, session_id, params)
@@ -73,6 +77,9 @@ class smtp_in(object):
             line = self.stream.readline()
             if not line:
                 break
+
+            if self._event_callback:
+                self._event_callback(line)
 
             fields = line.strip().split('|')
             kind, version, timestamp, subsystem, event, session_id = fields[0:6]
