@@ -79,7 +79,7 @@ class smtp_in(object):
                 break
 
             if self._event_callback:
-                self._event_callback(line)
+                self._event_callback(line.strip())
 
             fields = line.strip().split('|')
             kind, version, timestamp, subsystem, event, session_id = fields[0:6]
