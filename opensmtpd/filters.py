@@ -47,22 +47,24 @@ class smtp_in(object):
         self._event_callback = None
         self.stream = stream
 
-    def on_report(self, event, func):
-        self._report_callback[event] = func
+    def on_report(self, event, func, arg):
+        self._report_callback[event] = (func, arg)
 
-    def on_filter(self, event, func):
-        self._filter_callback[event] = func
+    def on_filter(self, event, func, arg):
+        self._filter_callback[event] = (func, arg)
 
-    def on_event(self, func):
-        self._event_callback = func
+    def on_event(self, func, arg):
+        self._event_callback = (func, arg)
 
     def _report(self, timestamp, event, session_id, params):
         if event in self._report_callback:
-            self._report_callback[event](timestamp, session_id, params)
+            func, arg = self._report_callback[event]
+            func(arg, timestamp, session_id, params)
 
     def _filter(self, timestamp, event, session_id, params):
         if event in self._filter_callback:
-            self._filter_callback[event](timestamp, session_id, params)
+            func, arg = self._filter_callback[event]
+            func(arg, timestamp, session_id, params)
             return
 
         if event == 'data-line':
@@ -79,7 +81,8 @@ class smtp_in(object):
                 break
 
             if self._event_callback:
-                self._event_callback(line.strip())
+                func, arg = self._event_callback
+                func(arg, line.strip())
 
             fields = line.strip().split('|')
             kind, version, timestamp, subsystem, event, session_id = fields[0:6]
