@@ -56,6 +56,22 @@ class smtp_in(object):
     def on_event(self, func, arg):
         self._event_callback = (func, arg)
 
+    def _register(self):
+        if self._event_callback:
+            sys.stdout.write("register|report|*\n")
+            sys.stdout.flush()
+        else:
+            for key in self._report_callback:
+                sys.stdout.write("register|report|%s\n" % key)
+            sys.stdout.flush()
+
+        if self._filter_callback:
+            for key in self._filter_callback:
+                sys.stdout.write("register|filter|%s\n" % key)
+            sys.stdout.flush()
+        sys.stdout.write("register|ready\n")
+        sys.stdout.flush()
+
     def _report(self, timestamp, event, session_id, params):
         if event in self._report_callback:
             func, arg = self._report_callback[event]
@@ -75,6 +91,9 @@ class smtp_in(object):
 
         
     def run(self):
+
+        self._register()
+
         while True:
             line = self.stream.readline()
             if not line:
