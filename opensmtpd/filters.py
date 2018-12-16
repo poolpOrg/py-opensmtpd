@@ -58,16 +58,16 @@ class smtp_in(object):
 
     def _register(self):
         if self._event_callback:
-            sys.stdout.write("register|report|*\n")
+            sys.stdout.write("register|report|smtp-in|*\n")
             sys.stdout.flush()
         else:
             for key in self._report_callback:
-                sys.stdout.write("register|report|%s\n" % key)
+                sys.stdout.write("register|report|smtp-in|%s\n" % key)
             sys.stdout.flush()
 
         if self._filter_callback:
             for key in self._filter_callback:
-                sys.stdout.write("register|filter|%s\n" % key)
+                sys.stdout.write("register|filter|smtp-in|%s\n" % key)
             sys.stdout.flush()
         sys.stdout.write("register|ready\n")
         sys.stdout.flush()
