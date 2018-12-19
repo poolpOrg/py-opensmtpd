@@ -18,8 +18,15 @@
 import io
 import sys
 
-stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
-stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+try:
+    sys.stdin.reconfigure(encoding='utf-8')
+    sys.stdout.reconfigure(encoding='utf-8')
+    stdin = sys.stdin
+    stdout = sys.stdout
+except:
+    stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
+    stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
 
 def proceed(token, session_id):
     stdout.write("filter-result|%s|%s|proceed\n" % (token, session_id))
