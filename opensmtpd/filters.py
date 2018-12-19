@@ -15,37 +15,40 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
+import io
 import sys
 
+stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
+stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-def proceed(filter_uid, session_id):
-    sys.stdout.write("filter-result|%s|%s|proceed\n" % (filter_uid, session_id))
-    sys.stdout.flush()
+def proceed(token, session_id):
+    stdout.write("filter-result|%s|%s|proceed\n" % (token, session_id))
+    stdout.flush()
 
-def rewrite(filter_uid, session_id, response):
-    sys.stdout.write("filter-result|%s|%s|rewrite|response\n" % (filter_uid, session_id, response))
-    sys.stdout.flush()
+def rewrite(token, session_id, response):
+    stdout.write("filter-result|%s|%s|rewrite|%s\n" % (token, session_id, response))
+    stdout.flush()
 
-def reject(filter_uid, session_id, reason):
-    sys.stdout.write("filter-result|%s|%s|reject|%s\n" % (filter_uid, session_id, reason))
-    sys.stdout.flush()
+def reject(token, session_id, reason):
+    stdout.write("filter-result|%s|%s|reject|%s\n" % (token, session_id, reason))
+    stdout.flush()
 
-def disconnect(filter_uid, session_id, reason):
-    sys.stdout.write("filter-result|%s|%s|disconnect|%s\n" % (filter_uid, session_id, reason))
-    sys.stdout.flush()
+def disconnect(token, session_id, reason):
+    stdout.write("filter-result|%s|%s|disconnect|%s\n" % (token, session_id, reason))
+    stdout.flush()
 
-def dataline(filter_uid, session_id, line, flush=True):
-    sys.stdout.write("filter-dataline|%s|%s|%s\n" % (filter_uid, session_id, line))
+def dataline(token, session_id, line, flush=True):
+    stdout.write("filter-dataline|%s|%s|%s\n" % (token, session_id, line))
     if flush:
-        sys.stdout.flush()
+        stdout.flush()
 
 
 class smtp_in(object):
-    def __init__(self, stream = sys.stdin):
+    def __init__(self, stream = None):
         self._report_callback = {}
         self._filter_callback = {}
         self._event_callback = None
-        self.stream = stream
+        self.istream = stream or stdin
 
     def on_report(self, event, func, arg):
         self._report_callback[event] = (func, arg)
@@ -58,33 +61,33 @@ class smtp_in(object):
 
     def _register(self):
         if self._event_callback:
-            sys.stdout.write("register|report|smtp-in|*\n")
-            sys.stdout.flush()
+            stdout.write("register|report|smtp-in|*\n")
+            stdout.flush()
         else:
             for key in self._report_callback:
-                sys.stdout.write("register|report|smtp-in|%s\n" % key)
-            sys.stdout.flush()
+                stdout.write("register|report|smtp-in|%s\n" % key)
+            stdout.flush()
 
         if self._filter_callback:
             for key in self._filter_callback:
-                sys.stdout.write("register|filter|smtp-in|%s\n" % key)
-            sys.stdout.flush()
-        sys.stdout.write("register|ready\n")
-        sys.stdout.flush()
+                stdout.write("register|filter|smtp-in|%s\n" % key)
+            stdout.flush()
+        stdout.write("register|ready\n")
+        stdout.flush()
 
-    def _report(self, timestamp, event, filter_uid, session_id, params):
+    def _report(self, timestamp, event, session_id, params):
         if event in self._report_callback:
             func, arg = self._report_callback[event]
-            func(arg, timestamp, filter_uid, session_id, params)
+            func(arg, timestamp, session_id, params)
 
-    def _filter(self, timestamp, event, filter_uid, session_id, params):
+    def _filter(self, timestamp, event, token, session_id, params):
         if event in self._filter_callback:
             func, arg = self._filter_callback[event]
-            func(arg, timestamp, filter_uid, session_id, params)
+            func(arg, timestamp, token, session_id, params)
             return
 
         if event == 'data-line':
-            dataline(session_id, filter_uid, '|'.join(params[7:]))
+            dataline(session_id, token, '|'.join(params[7:]))
             return
 
         proceed(session_id)
@@ -95,7 +98,7 @@ class smtp_in(object):
         self._register()
 
         while True:
-            line = self.stream.readline()
+            line = self.istream.readline()
             if not line:
                 break
 
@@ -104,16 +107,19 @@ class smtp_in(object):
                 func(arg, line.strip())
 
             fields = line.strip().split('|')
-            kind, version, timestamp, subsystem, event, filter_uid, session_id = fields[0:7]
-            params = fields[7:]
+            kind, version, subsystem = fields[0], fields[1], fields[3]
 
             if subsystem != "smtp-in":
                 continue
 
             if kind == 'report' and version == '1':
-                self._report(timestamp, event, filter_uid, session_id, params)
+                kind, version, timestamp, subsystem, event, session_id = fields[0:6]
+                params = fields[6:]
+                self._report(timestamp, event, session_id, params)
             elif kind == 'filter' and version == '1':
-                self._filter(timestamp, event, filter_uid, session_id, params)
+                kind, version, timestamp, subsystem, event, token, session_id = fields[0:7]
+                params = fields[7:]
+                self._filter(timestamp, event, token, session_id, params)
 
             # either we received an unsupported message kind
             # or an unsupported message version, skip.
