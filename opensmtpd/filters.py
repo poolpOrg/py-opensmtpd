@@ -124,7 +124,7 @@ class smtp_in(object):
                 params = fields[6:]
                 self._report(timestamp, event, session_id, params)
             elif kind == 'filter' and version == '1':
-                kind, version, timestamp, subsystem, event, token, session_id = fields[0:7]
+                kind, version, timestamp, subsystem, event, session_id, token = fields[0:7]
                 params = fields[7:]
                 self._filter(timestamp, event, token, session_id, params)
 
