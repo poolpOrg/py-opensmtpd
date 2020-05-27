@@ -99,7 +99,7 @@ def dispatch():
         elif atoms[3] == "lookup":
             lookupCb(token, atoms[5], '|'.join(atoms[6:]))
         elif atoms[3] == "fetch":
-            lookupCb(token, atoms[5])
+            fetchCb(token, atoms[5])
         else:
             sys.stderr.write("unsupported operation: %s\n" % atoms[3])
             sys.exit(1)            
