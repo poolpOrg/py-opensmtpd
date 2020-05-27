@@ -50,7 +50,7 @@ def result(token, result=None):
         stdout.write("table-result|%s|found|%s\n" % (token, result))
     stdout.flush()        
 
-updateCb = updated
+updateCb = lambda x, y: updated(x)
 checkCb = None
 lookupCb = None
 fetchCb = None
@@ -79,7 +79,7 @@ def dispatch():
         line = line.strip()
 
         atoms = line.split('|')
-        if len(atoms) < 5:
+        if len(atoms) < 6:
             sys.stderr.write("missing atoms: %s\n" % line)
             sys.exit(1)
 
@@ -91,17 +91,18 @@ def dispatch():
             sys.stderr.write("unsupported protocol version: %s\n" % atoms[1])
             sys.exit(1)
 
-        token = atoms[4]
-        if atoms[3] == "update":
-            updateCb(token)
-        elif atoms[3] == "check":
-            checkCb(token, atoms[5], '|'.join(atoms[6:]))
-        elif atoms[3] == "lookup":
-            lookupCb(token, atoms[5], '|'.join(atoms[6:]))
-        elif atoms[3] == "fetch":
-            fetchCb(token, atoms[5])
+        table_name = atoms[3]
+        token = atoms[5]
+        if atoms[4] == "update":
+            updateCb(token, table_name)
+        elif atoms[4] == "check":
+            checkCb(token, table_name, atoms[6], '|'.join(atoms[7:]))
+        elif atoms[4] == "lookup":
+            lookupCb(token, table_name, atoms[6], '|'.join(atoms[7:]))
+        elif atoms[4] == "fetch":
+            fetchCb(token, table_name, atoms[6])
         else:
-            sys.stderr.write("unsupported operation: %s\n" % atoms[3])
+            sys.stderr.write("unsupported operation: %s\n" % atoms[4])
             sys.exit(1)            
 
 if __name__ == "__main__":
